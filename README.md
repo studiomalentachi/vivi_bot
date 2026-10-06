@@ -1,24 +1,16 @@
-# Vivi Bot ✨
+# Vivi Bot ✨ — v1.1
 
-Primeira versão da Vivi para Telegram.
+Esta versão adiciona o cadastro persistente da avatar.
 
-## Para funcionar no Railway
+## Railway
+Variável obrigatória: `TELEGRAM_BOT_TOKEN`
 
-Crie a variável de ambiente:
+Volume montado em: `/app/data`
 
-`TELEGRAM_BOT_TOKEN`
+## Comandos
+- `/avatar` — iniciar/adicionar referências
+- `/finalizaravatar` — concluir cadastro
+- `/veravatar` — ver quantidade/status
+- `/limparavatar` — apagar referências
 
-e cole nela o token gerado pelo BotFather.
-
-O Railway executará:
-
-`npm start`
-
-## O que esta versão faz
-
-- Responde ao `/start`
-- Mostra o menu principal
-- Responde aos botões com mensagens provisórias
-- Mantém um servidor HTTP simples para o Railway
-
-As integrações com IA, avatar, marketing e políticas serão adicionadas nas próximas etapas.
+Fluxo: envie `/avatar`, mande de 3 a 10 fotos e finalize com `/finalizaravatar`.

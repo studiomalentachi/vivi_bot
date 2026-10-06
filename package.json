@@ -1,13 +1,9 @@
 {
   "name": "vivi-bot",
-  "version": "1.0.0",
-  "description": "Bot da Vivi para Telegram, pronto para Railway",
+  "version": "1.1.0",
+  "description": "Bot da Vivi para Telegram com cadastro persistente da avatar",
   "main": "index.js",
   "type": "module",
-  "scripts": {
-    "start": "node index.js"
-  },
-  "engines": {
-    "node": ">=20"
-  }
+  "scripts": {"start": "node index.js"},
+  "engines": {"node": ">=20"}
 }
