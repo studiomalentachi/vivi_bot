@@ -3,17 +3,25 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 const DATA_DIR = process.env.DATA_DIR || "/app/data";
 const AVATARS_DIR = path.join(DATA_DIR, "avatars");
-const STATE_FILE = path.join(DATA_DIR, "avatar-state.json");
+const STATE_FILE = path.join(DATA_DIR, "state.json");
 
 if (!TOKEN) {
-  console.error("ERRO: TELEGRAM_BOT_TOKEN não foi configurada.");
+  console.error("ERRO: TELEGRAM_BOT_TOKEN não configurado.");
+  process.exit(1);
+}
+if (!GEMINI_API_KEY) {
+  console.error("ERRO: GEMINI_API_KEY não configurado.");
   process.exit(1);
 }
 
-const API = `https://api.telegram.org/bot${TOKEN}`;
-const FILE_API = `https://api.telegram.org/file/bot${TOKEN}`;
+const TG_API = `https://api.telegram.org/bot${TOKEN}`;
+const TG_FILE_API = `https://api.telegram.org/file/bot${TOKEN}`;
+const GEMINI_URL =
+  `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 const mainKeyboard = {
   keyboard: [
@@ -25,22 +33,113 @@ const mainKeyboard = {
   resize_keyboard: true
 };
 
-const startText = `✨ Oi! Eu sou a Vivi.\n\nSua assistente de criação de conteúdo, marketing e IA. 💡\n\nPosso transformar produtos e ideias em conteúdos estratégicos para chamar atenção, gerar desejo e vender.\n\n🎬 Roteiros e cenas para vídeos\n🖼️ Imagens com IA\n👩 Conteúdos com sua avatar\n🧠 Marketing, copy e persuasão\n🔥 Hooks e estratégias de venda\n📝 Legendas, CTAs e hashtags\n📱 TikTok Shop, Shopee Vídeos, Instagram, TikTok e YouTube Shorts\n🛡️ Análise de possíveis riscos antes da publicação\n\n✨ Por onde vamos começar?`;
+const startText = `✨ Oi! Eu sou a Vivi.
 
-const avatarIntro = `👩 Minha Avatar\n\nEnvie de 3 a 10 fotos de referência da sua avatar.\n\nTente incluir:\n• rosto de frente\n• rosto em ângulo\n• corpo inteiro\n• diferentes expressões\n\nVou salvar essas referências para reutilizá-las nas próximas criações. ✨\n\nQuando terminar, envie /finalizaravatar.`;
+Sua assistente de criação de conteúdo, marketing e IA. 💡
+
+Posso transformar produtos e ideias em conteúdos estratégicos para chamar atenção, gerar desejo e vender.
+
+🎬 Roteiros e cenas para vídeos
+🖼️ Prompts e planejamento visual
+👩 Conteúdos com sua avatar
+🧠 Marketing, copy e persuasão
+🔥 Hooks e estratégias de venda
+📝 Legendas, CTAs e hashtags
+📱 TikTok Shop, Shopee Vídeos, Instagram, TikTok e YouTube Shorts
+🛡️ Análise preventiva de riscos antes da publicação
+
+✨ Por onde vamos começar?`;
+
+const SYSTEM_PROMPT = `
+Você é Vivi, uma estrategista de conteúdo, copywriter, roteirista de vídeos curtos e diretora criativa especializada em social commerce e marketing de afiliados.
+
+OBJETIVO
+Transformar produtos e ideias em conteúdo que prenda atenção, desperte desejo e aumente a chance de conversão sem mentir, manipular de forma enganosa ou inventar informações.
+
+PLATAFORMAS
+TikTok, TikTok Shop, Shopee Vídeos, Instagram/Reels e YouTube Shorts.
+
+ESTILO
+- Responda sempre em português do Brasil, salvo pedido contrário.
+- Seja prática, criativa e específica.
+- Evite frases genéricas de publicidade.
+- Priorize conteúdo natural, visual, elegante, desejável e com cara de criador real.
+- Pense mobile-first e em retenção nos primeiros 1–3 segundos.
+- Quando fizer sentido, ofereça 3 hooks e destaque qual você escolheria.
+- Para vídeos, prefira cenas claras, ações visuais e texto na tela curto.
+- Quando o usuário disser que usará YouTube Create, divida os prompts em clipes de até 10 segundos e preserve continuidade visual entre eles.
+
+MARKETING E PERSUASÃO
+Escolha a estrutura mais adequada ao produto, sem usar uma fórmula por obrigação. Você pode usar:
+AIDA, PAS, BAB, 4Ps, problema-solução, demonstração, curiosidade, open loop, pattern interrupt, storytelling, UGC, POV, review natural, antes/depois quando legítimo, objeção-resposta, benefício-demonstração-CTA, lifestyle e contraste visual.
+Explique a estratégia apenas quando isso ajudar.
+
+REGRAS DE CREDIBILIDADE
+Nunca invente:
+- preço, desconto, cupom, frete grátis ou duração de promoção;
+- estoque, "últimas unidades" ou escassez;
+- quantidade de vendas, avaliações, notas ou depoimentos;
+- resultados garantidos;
+- características técnicas que não foram fornecidas ou claramente visíveis;
+- aprovação de uma plataforma ou alegação de que um conteúdo é "100% seguro".
+Quando faltar um dado necessário, marque como "[CONFIRMAR]" ou pergunte.
+
+POLÍTICAS E COMPLIANCE
+Ajude a reduzir risco de remoção, limitação ou penalidade.
+- Identifique alegações exageradas, enganosas, médicas, financeiras ou não comprovadas.
+- Sinalize possíveis problemas com direitos autorais, música, marcas, antes/depois, conteúdo sintético, promoções, preço e disclosure de publicidade/afiliado.
+- Diferencie "estratégia persuasiva" de falsa urgência e falsa prova social.
+- Se pedirem análise de política, dê um nível de risco (baixo/médio/alto), destaque trechos problemáticos e reescreva opções mais seguras.
+- Não diga que conhece a regra mais recente em tempo real. Se uma decisão depender de uma política atual específica, diga que a regra oficial deve ser verificada; uma integração de políticas atualizadas será adicionada depois.
+
+ROTEIROS DE VENDA
+Quando receber um produto, raciocine sobre:
+1. público provável;
+2. dor/desejo;
+3. benefício mais demonstrável;
+4. diferencial;
+5. objeções;
+6. melhor ângulo de venda;
+7. hook;
+8. sequência visual;
+9. CTA compatível com a informação disponível.
+
+FORMATO PADRÃO PARA "CRIAR VÍDEO"
+Entregue:
+🎯 Estratégia
+👤 Público
+💥 Hooks
+🎬 Roteiro por cenas
+⏱️ Duração de cada cena
+🎙️ Narração
+📝 Texto na tela
+🤖 Prompt visual/vídeo
+🛍️ CTA
+📱 Adaptação por plataforma quando solicitada
+🛡️ Alertas de compliance, somente se houver
+
+IMAGENS
+Você ainda não gera a imagem diretamente. Crie prompts detalhados para um gerador visual, mantendo consistência de personagem, produto, roupa, cenário, câmera, luz e proporções. Se a pessoa disser "minha avatar", assuma que existem referências cadastradas, mas não invente características que não foram fornecidas ao modelo.
+
+CONVERSA
+Entenda mensagens curtas pelo contexto. Não faça interrogatório: se der para criar uma boa primeira versão com o que existe, crie e marque o que precisa ser confirmado.
+`.trim();
 
 async function ensureStorage() {
   await fs.mkdir(AVATARS_DIR, { recursive: true });
-  try { await fs.access(STATE_FILE); }
-  catch { await fs.writeFile(STATE_FILE, JSON.stringify({ users: {} }, null, 2), "utf8"); }
+  try {
+    await fs.access(STATE_FILE);
+  } catch {
+    await fs.writeFile(STATE_FILE, JSON.stringify({ users: {} }, null, 2), "utf8");
+  }
 }
 
 async function readState() {
   await ensureStorage();
   try {
-    const data = JSON.parse(await fs.readFile(STATE_FILE, "utf8"));
-    if (!data.users) data.users = {};
-    return data;
+    const parsed = JSON.parse(await fs.readFile(STATE_FILE, "utf8"));
+    if (!parsed.users) parsed.users = {};
+    return parsed;
   } catch {
     return { users: {} };
   }
@@ -48,24 +147,38 @@ async function readState() {
 
 async function writeState(state) {
   await ensureStorage();
-  const temp = `${STATE_FILE}.tmp`;
-  await fs.writeFile(temp, JSON.stringify(state, null, 2), "utf8");
-  await fs.rename(temp, STATE_FILE);
+  const tmp = `${STATE_FILE}.tmp`;
+  await fs.writeFile(tmp, JSON.stringify(state, null, 2), "utf8");
+  await fs.rename(tmp, STATE_FILE);
 }
 
 function getUser(state, chatId) {
   const key = String(chatId);
-  if (!state.users[key]) state.users[key] = { collectingAvatar: false, avatarFinalized: false, photos: [] };
-  return state.users[key];
+  if (!state.users[key]) {
+    state.users[key] = {
+      collectingAvatar: false,
+      avatarFinalized: false,
+      photos: [],
+      mode: null,
+      history: []
+    };
+  }
+  const u = state.users[key];
+  if (!Array.isArray(u.photos)) u.photos = [];
+  if (!Array.isArray(u.history)) u.history = [];
+  if (!("collectingAvatar" in u)) u.collectingAvatar = false;
+  if (!("avatarFinalized" in u)) u.avatarFinalized = false;
+  if (!("mode" in u)) u.mode = null;
+  return u;
 }
 
 async function telegram(method, body = {}) {
-  const response = await fetch(`${API}/${method}`, {
+  const r = await fetch(`${TG_API}/${method}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body)
   });
-  const data = await response.json();
+  const data = await r.json();
   if (!data.ok) throw new Error(`Telegram API: ${JSON.stringify(data)}`);
   return data.result;
 }
@@ -74,143 +187,408 @@ async function sendMessage(chatId, text, extra = {}) {
   return telegram("sendMessage", { chat_id: chatId, text, ...extra });
 }
 
+function splitText(text, max = 3900) {
+  const pieces = [];
+  let rest = String(text || "");
+  while (rest.length > max) {
+    let cut = rest.lastIndexOf("\n", max);
+    if (cut < max * 0.5) cut = rest.lastIndexOf(" ", max);
+    if (cut < max * 0.5) cut = max;
+    pieces.push(rest.slice(0, cut).trim());
+    rest = rest.slice(cut).trim();
+  }
+  if (rest) pieces.push(rest);
+  return pieces;
+}
+
+async function sendLongMessage(chatId, text, extraLast = {}) {
+  const parts = splitText(text);
+  for (let i = 0; i < parts.length; i++) {
+    await sendMessage(chatId, parts[i], i === parts.length - 1 ? extraLast : {});
+  }
+}
+
+async function getTelegramFileBytes(fileId) {
+  const info = await telegram("getFile", { file_id: fileId });
+  if (!info.file_path) throw new Error("file_path ausente.");
+  const r = await fetch(`${TG_FILE_API}/${info.file_path}`);
+  if (!r.ok) throw new Error(`Falha no download da imagem: ${r.status}`);
+  const buffer = Buffer.from(await r.arrayBuffer());
+  const ext = path.extname(info.file_path).toLowerCase();
+  const mime =
+    ext === ".png" ? "image/png" :
+    ext === ".webp" ? "image/webp" : "image/jpeg";
+  return { buffer, mime, filePath: info.file_path };
+}
+
+async function callGemini({ prompt, history = [], image = null }) {
+  const contents = [];
+
+  // Mantém apenas um histórico curto para economizar tokens.
+  for (const item of history.slice(-8)) {
+    contents.push({
+      role: item.role,
+      parts: [{ text: item.text }]
+    });
+  }
+
+  const parts = [{ text: prompt }];
+  if (image) {
+    parts.push({
+      inline_data: {
+        mime_type: image.mime,
+        data: image.buffer.toString("base64")
+      }
+    });
+  }
+
+  contents.push({ role: "user", parts });
+
+  const response = await fetch(GEMINI_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": GEMINI_API_KEY
+    },
+    body: JSON.stringify({
+      system_instruction: {
+        parts: [{ text: SYSTEM_PROMPT }]
+      },
+      contents,
+      generationConfig: {
+        maxOutputTokens: 3500
+      }
+    })
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    console.error("Gemini error:", JSON.stringify(data));
+    throw new Error(data?.error?.message || `Gemini HTTP ${response.status}`);
+  }
+
+  const text = (data.candidates?.[0]?.content?.parts || [])
+    .map(p => p.text || "")
+    .join("")
+    .trim();
+
+  if (!text) {
+    throw new Error("A IA não retornou texto.");
+  }
+  return text;
+}
+
+function promptForMode(mode, userText = "") {
+  const instructions = {
+    video: `Crie um vídeo curto de alta retenção e com intenção de venda. Se houver informação suficiente, entregue o pacote completo no formato padrão de criar vídeo. Divida cenas pensando em clipes de até 10 segundos. Pedido do usuário: ${userText}`,
+    produto: `Analise o produto enviado. Identifique o que é visível e NÃO invente características. Crie uma estratégia comercial inicial, 3 hooks, benefícios demonstráveis, possíveis objeções e uma proposta de vídeo curto. Se faltarem preço, plataforma ou características, use [CONFIRMAR]. Informações do usuário: ${userText}`,
+    roteiro: `Crie um roteiro persuasivo para vídeo curto com foco em retenção e conversão, sem falsas promessas. Pedido: ${userText}`,
+    imagem: `Crie um prompt visual extremamente detalhado para gerar a imagem solicitada. Se mencionar "minha avatar", preserve a identidade da avatar cadastrada e descreva apenas o que o usuário informou ou o que estiver visível em uma imagem enviada. Pedido: ${userText}`,
+    vender: `Atue como especialista em CRO, copy e social commerce. Melhore o conteúdo fornecido para aumentar retenção, desejo e conversão, sem inventar prova social, desconto, urgência ou benefícios. Mostre primeiro a versão melhorada e depois, brevemente, o que mudou. Conteúdo: ${userText}`,
+    politicas: `Faça uma revisão preventiva de compliance do conteúdo para a plataforma indicada. Classifique risco baixo/médio/alto, aponte exatamente os trechos problemáticos, explique o motivo em linguagem simples e dê uma versão mais segura. Não prometa aprovação e avise quando uma regra atual oficial precisar ser conferida. Conteúdo/plataforma: ${userText}`,
+    ideias: `Gere ideias de conteúdo fortes e variadas, pensando em retenção, desejo, utilidade e venda. Evite ideias repetitivas. Pedido: ${userText}`
+  };
+  return instructions[mode] || userText;
+}
+
+async function askAI(chatId, userText, { image = null } = {}) {
+  const state = await readState();
+  const user = getUser(state, chatId);
+  const mode = user.mode || "chat";
+
+  const prompt = mode === "chat"
+    ? userText
+    : promptForMode(mode, userText);
+
+  await telegram("sendChatAction", { chat_id: chatId, action: "typing" });
+
+  const answer = await callGemini({
+    prompt,
+    history: user.history,
+    image
+  });
+
+  user.history.push({ role: "user", text: prompt });
+  user.history.push({ role: "model", text: answer });
+  user.history = user.history.slice(-10);
+  await writeState(state);
+
+  await sendLongMessage(chatId, answer, { reply_markup: mainKeyboard });
+}
+
+async function setMode(chatId, mode, message) {
+  const state = await readState();
+  const user = getUser(state, chatId);
+  user.mode = mode;
+  await writeState(state);
+  await sendMessage(chatId, message);
+}
+
 async function startAvatarCollection(chatId) {
   const state = await readState();
   const user = getUser(state, chatId);
   user.collectingAvatar = true;
   user.avatarFinalized = false;
+  user.mode = null;
   await writeState(state);
-  let text = avatarIntro;
-  if (user.photos.length) text += `\n\n📸 Você já tem ${user.photos.length} referência(s) salva(s).`;
-  await sendMessage(chatId, text, { reply_markup: mainKeyboard });
+
+  await sendMessage(chatId,
+`👩 Minha Avatar
+
+Envie de 3 a 10 fotos de referência da sua avatar.
+
+Tente incluir:
+• rosto de frente
+• rosto em ângulo
+• corpo inteiro
+• diferentes expressões
+
+Quando terminar, envie /finalizaravatar.
+
+📸 Referências já salvas: ${user.photos.length}/10`);
 }
 
-async function downloadTelegramPhoto(fileId, fileUniqueId, chatId) {
-  const fileInfo = await telegram("getFile", { file_id: fileId });
-  const response = await fetch(`${FILE_API}/${fileInfo.file_path}`);
-  if (!response.ok) throw new Error(`Falha ao baixar foto: ${response.status}`);
-  const bytes = Buffer.from(await response.arrayBuffer());
-  const ext = path.extname(fileInfo.file_path) || ".jpg";
-  const safe = String(fileUniqueId).replace(/[^a-zA-Z0-9_-]/g, "");
-  const userDir = path.join(AVATARS_DIR, String(chatId));
-  await fs.mkdir(userDir, { recursive: true });
-  const localPath = path.join(userDir, `${safe}${ext}`);
-  await fs.writeFile(localPath, bytes);
-  return { fileId, fileUniqueId, localPath, savedAt: new Date().toISOString() };
-}
-
-async function handleAvatarPhoto(message) {
+async function saveAvatarPhoto(message) {
   const chatId = message.chat.id;
   const state = await readState();
   const user = getUser(state, chatId);
 
-  if (!user.collectingAvatar) {
-    await sendMessage(chatId, "📸 Para salvar esta foto como referência, toque em 👩 Minha avatar ou envie /avatar primeiro.");
-    return;
-  }
   if (user.photos.length >= 10) {
-    await sendMessage(chatId, "✨ Você já chegou ao limite de 10 referências. Envie /finalizaravatar.");
+    await sendMessage(chatId, "Você já chegou a 10 referências. Envie /finalizaravatar. ✨");
     return;
   }
 
-  const best = message.photo[message.photo.length - 1];
+  const best = message.photo.at(-1);
   if (user.photos.some(p => p.fileUniqueId === best.file_unique_id)) {
-    await sendMessage(chatId, "Essa foto já foi salva como referência. 💗");
+    await sendMessage(chatId, "Essa foto já está salva. 💗");
     return;
   }
 
-  const saved = await downloadTelegramPhoto(best.file_id, best.file_unique_id, chatId);
-  user.photos.push(saved);
+  const image = await getTelegramFileBytes(best.file_id);
+  const userDir = path.join(AVATARS_DIR, String(chatId));
+  await fs.mkdir(userDir, { recursive: true });
+
+  const ext = path.extname(image.filePath) || ".jpg";
+  const filename = `${best.file_unique_id.replace(/[^a-zA-Z0-9_-]/g, "")}${ext}`;
+  const localPath = path.join(userDir, filename);
+  await fs.writeFile(localPath, image.buffer);
+
+  user.photos.push({
+    fileId: best.file_id,
+    fileUniqueId: best.file_unique_id,
+    localPath,
+    savedAt: new Date().toISOString()
+  });
   await writeState(state);
 
-  const count = user.photos.length;
-  await sendMessage(chatId, `✅ Referência ${count} salva.\n${count < 10 ? "Pode enviar a próxima." : "Você chegou a 10 referências. Envie /finalizaravatar."}`);
+  await sendMessage(
+    chatId,
+    `✅ Referência ${user.photos.length} salva.\n${user.photos.length < 10 ? "Pode enviar a próxima." : "Envie /finalizaravatar."}`
+  );
 }
 
 async function finalizeAvatar(chatId) {
   const state = await readState();
   const user = getUser(state, chatId);
-  const count = user.photos.length;
 
-  if (count < 3) {
-    user.collectingAvatar = true;
-    await writeState(state);
-    await sendMessage(chatId, `📸 Você tem ${count} referência(s) salva(s). Envie pelo menos 3 fotos antes de finalizar.`);
+  if (user.photos.length < 3) {
+    await sendMessage(chatId, `Envie pelo menos 3 fotos. Você tem ${user.photos.length}.`);
     return;
   }
 
   user.collectingAvatar = false;
   user.avatarFinalized = true;
   await writeState(state);
-  await sendMessage(chatId, `✨ Avatar cadastrada!\n\n📸 ${count} referências salvas com sucesso.\n\nDepois vamos conectar essas imagens à geração de cenas com IA. 💗`, { reply_markup: mainKeyboard });
+  await sendMessage(chatId,
+    `✨ Avatar cadastrada!\n\n📸 ${user.photos.length} referências salvas.\n\nAgora elas ficam guardadas no Volume da Vivi. 💗`,
+    { reply_markup: mainKeyboard }
+  );
 }
 
 async function showAvatarStatus(chatId) {
   const state = await readState();
   const user = getUser(state, chatId);
-  const count = user.photos.length;
-  if (!count) {
-    await sendMessage(chatId, "👩 Você ainda não cadastrou referências. Envie /avatar para começar.");
-    return;
-  }
-  await sendMessage(chatId, `👩 Minha Avatar\n\n📸 Referências salvas: ${count}/10\n${user.avatarFinalized ? "✅ Cadastro finalizado" : "🟡 Cadastro em andamento"}\n\nUse /avatar para adicionar fotos ou /limparavatar para apagar tudo.`);
+  await sendMessage(chatId,
+    user.photos.length
+      ? `👩 Minha Avatar\n\n📸 ${user.photos.length}/10 referências\n${user.avatarFinalized ? "✅ Cadastro finalizado" : "🟡 Cadastro em andamento"}`
+      : "Você ainda não cadastrou sua avatar. Envie /avatar."
+  );
 }
 
 async function clearAvatar(chatId) {
   const state = await readState();
   const key = String(chatId);
   await fs.rm(path.join(AVATARS_DIR, key), { recursive: true, force: true });
-  state.users[key] = { collectingAvatar: false, avatarFinalized: false, photos: [] };
+  state.users[key] = {
+    collectingAvatar: false,
+    avatarFinalized: false,
+    photos: [],
+    mode: null,
+    history: []
+  };
   await writeState(state);
-  await sendMessage(chatId, "🗑️ As referências da sua avatar foram apagadas. Envie /avatar quando quiser cadastrar novamente.");
+  await sendMessage(chatId, "🗑️ Avatar apagada. Envie /avatar para cadastrar novamente.");
+}
+
+async function handlePhoto(message) {
+  const chatId = message.chat.id;
+  const state = await readState();
+  const user = getUser(state, chatId);
+
+  if (user.collectingAvatar) {
+    await saveAvatarPhoto(message);
+    return;
+  }
+
+  if (["produto", "video", "imagem", "vender", "politicas"].includes(user.mode)) {
+    const best = message.photo.at(-1);
+    const image = await getTelegramFileBytes(best.file_id);
+    const caption = (message.caption || "").trim();
+    const fallback = {
+      produto: "Analise este produto pela imagem e monte a melhor estratégia inicial.",
+      video: "Use esta imagem como referência para criar o vídeo.",
+      imagem: "Use esta imagem como referência e crie o prompt visual solicitado.",
+      vender: "Analise este conteúdo/produto visualmente e melhore a estratégia para vender.",
+      politicas: "Analise esta imagem como parte do conteúdo e faça uma revisão preventiva."
+    }[user.mode];
+
+    try {
+      await askAI(chatId, caption || fallback, { image });
+    } catch (err) {
+      console.error(err);
+      await sendMessage(chatId, `Ops! Não consegui analisar a imagem agora.\n\n${err.message}`);
+    }
+    return;
+  }
+
+  await sendMessage(chatId,
+    "📸 Recebi a imagem. Escolha primeiro o que quer fazer com ela: 🛍️ Produto, 🎬 Criar vídeo, 🖼️ Imagem, 🔥 Melhorar para vender ou 🛡️ Verificar políticas."
+  );
 }
 
 async function handleMessage(message) {
   const chatId = message.chat.id;
   const text = (message.text || "").trim();
 
-  if (message.photo?.length) return handleAvatarPhoto(message);
-  if (text === "/start") return sendMessage(chatId, startText, { reply_markup: mainKeyboard });
-  if (text === "/avatar" || text === "👩 Minha avatar") return startAvatarCollection(chatId);
+  if (message.photo?.length) {
+    await handlePhoto(message);
+    return;
+  }
+
+  if (text === "/start") {
+    const state = await readState();
+    const user = getUser(state, chatId);
+    user.mode = null;
+    await writeState(state);
+    await sendMessage(chatId, startText, { reply_markup: mainKeyboard });
+    return;
+  }
+
+  if (text === "/avatar" || text === "👩 Minha avatar") {
+    await startAvatarCollection(chatId);
+    return;
+  }
   if (text === "/finalizaravatar") return finalizeAvatar(chatId);
   if (text === "/veravatar") return showAvatarStatus(chatId);
   if (text === "/limparavatar") return clearAvatar(chatId);
-  if (text === "/ajuda" || text === "/help") return sendMessage(chatId, "✨ Use o menu abaixo. Para cadastrar sua avatar, toque em 👩 Minha avatar.", { reply_markup: mainKeyboard });
 
-  const placeholders = {
-    "🎬 Criar vídeo": "🎬 Em breve vou montar seu vídeo completo por cenas.",
-    "🛍️ Produto": "🛍️ Em breve você poderá me enviar fotos e informações do produto.",
-    "✍️ Roteiro": "✍️ Em breve vou criar roteiros estratégicos e persuasivos.",
-    "🖼️ Imagem": "🖼️ Em breve vou preparar imagens e prompts para IA.",
-    "🔥 Melhorar para vender": "🔥 Em breve vou analisar e melhorar conteúdos para aumentar o potencial de venda.",
-    "🛡️ Verificar políticas": "🛡️ Em breve vou revisar o conteúdo de acordo com a plataforma escolhida.",
-    "💡 Ideias": "💡 Em breve vou gerar ideias de conteúdo de acordo com seus produtos e objetivo."
-  };
+  if (text === "🎬 Criar vídeo" || text === "/video") {
+    return setMode(chatId, "video",
+      "🎬 Me mande o produto, a ideia ou uma foto.\n\nEu vou pensar no hook, estratégia de venda, roteiro, narração e cenas de até 10 segundos.");
+  }
 
-  if (placeholders[text]) return sendMessage(chatId, placeholders[text], { reply_markup: mainKeyboard });
-  return sendMessage(chatId, "✨ Ainda estou sendo construída. Use /start para abrir o menu ou /avatar para cadastrar sua avatar.", { reply_markup: mainKeyboard });
+  if (text === "🛍️ Produto") {
+    return setMode(chatId, "produto",
+      "🛍️ Envie uma foto do produto e, se souber, escreva junto preço, principais características e onde pretende postar.\n\nSe não souber tudo, pode mandar só a foto.");
+  }
+
+  if (text === "✍️ Roteiro" || text === "/roteiro") {
+    return setMode(chatId, "roteiro",
+      "✍️ Me diga o produto ou assunto do vídeo. Eu preparo um roteiro pensado para retenção e venda.");
+  }
+
+  if (text === "🖼️ Imagem" || text === "/imagem") {
+    return setMode(chatId, "imagem",
+      "🖼️ Descreva a imagem que quer criar ou envie uma referência.\n\nPor enquanto vou preparar o prompt visual completo; a geração direta de imagens entra na próxima integração.");
+  }
+
+  if (text === "🔥 Melhorar para vender" || text === "/vender") {
+    return setMode(chatId, "vender",
+      "🔥 Envie seu roteiro, legenda, ideia ou imagem. Vou melhorar hook, retenção, desejo, persuasão e CTA sem inventar informações.");
+  }
+
+  if (text === "🛡️ Verificar políticas" || text === "/politicas") {
+    return setMode(chatId, "politicas",
+      "🛡️ Envie o roteiro, legenda ou conteúdo e diga onde pretende postar: TikTok Shop, TikTok, Shopee, Instagram ou YouTube.\n\nVou fazer uma triagem preventiva de risco.");
+  }
+
+  if (text === "💡 Ideias" || text === "/ideias") {
+    return setMode(chatId, "ideias",
+      "💡 Me diga o produto, nicho ou objetivo. Vou criar ideias variadas de conteúdo com potencial de retenção e venda.");
+  }
+
+  if (text === "/limparconversa") {
+    const state = await readState();
+    const user = getUser(state, chatId);
+    user.history = [];
+    user.mode = null;
+    await writeState(state);
+    await sendMessage(chatId, "✨ Contexto da conversa limpo. Use /start para escolher uma função.");
+    return;
+  }
+
+  if (text === "/ajuda" || text === "/help") {
+    await sendMessage(chatId,
+      "✨ Escolha uma função no menu ou simplesmente converse comigo.\n\nUse /limparconversa quando quiser começar um assunto do zero.",
+      { reply_markup: mainKeyboard }
+    );
+    return;
+  }
+
+  if (text) {
+    try {
+      await askAI(chatId, text);
+    } catch (err) {
+      console.error(err);
+      await sendMessage(chatId,
+        `Ops! Minha IA não respondeu agora.\n\n${err.message}\n\nSe continuar acontecendo, confira a GEMINI_API_KEY e o deploy no Railway.`
+      );
+    }
+  }
 }
 
 let offset = 0;
+
 async function poll() {
   await ensureStorage();
-  console.log(`Vivi iniciada ✨ Dados em: ${DATA_DIR}`);
+  console.log(`Vivi v1.2 online ✨ | Gemini: ${GEMINI_MODEL}`);
+
   while (true) {
     try {
-      const updates = await telegram("getUpdates", { offset, timeout: 30, allowed_updates: ["message"] });
+      const updates = await telegram("getUpdates", {
+        offset,
+        timeout: 30,
+        allowed_updates: ["message"]
+      });
+
       for (const update of updates) {
         offset = update.update_id + 1;
         if (update.message) {
-          try { await handleMessage(update.message); }
-          catch (err) {
-            console.error("Erro ao processar mensagem:", err);
-            try { await sendMessage(update.message.chat.id, "Ops! Tive um erro ao processar isso. Tente novamente."); } catch {}
+          try {
+            await handleMessage(update.message);
+          } catch (err) {
+            console.error("Erro ao processar:", err);
+            try {
+              await sendMessage(update.message.chat.id,
+                "Ops! Tive um erro ao processar isso. Tente novamente em alguns segundos.");
+            } catch {}
           }
         }
       }
-    } catch (error) {
-      console.error("Erro no polling:", error);
-      await new Promise(resolve => setTimeout(resolve, 3000));
+    } catch (err) {
+      console.error("Polling:", err);
+      await new Promise(r => setTimeout(r, 3000));
     }
   }
 }
@@ -218,7 +596,9 @@ async function poll() {
 const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => {
   res.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
-  res.end("Vivi está online ✨");
-}).listen(PORT, "0.0.0.0", () => console.log(`Servidor ativo na porta ${PORT}`));
+  res.end(`Vivi v1.2 online ✨ | ${GEMINI_MODEL}`);
+}).listen(PORT, "0.0.0.0", () => {
+  console.log(`HTTP ativo na porta ${PORT}`);
+});
 
 poll();
