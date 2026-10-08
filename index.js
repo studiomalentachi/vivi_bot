@@ -27,6 +27,7 @@ const mainKeyboard = {
   keyboard: [
     [{ text: "🎬 Criar vídeo" }, { text: "🛍️ Produto" }],
     [{ text: "✍️ Roteiro" }, { text: "🖼️ Imagem" }],
+    [{ text: "🎥 Prompt profissional" }],
     [{ text: "👩 Minha avatar" }, { text: "🔥 Melhorar para vender" }],
     [{ text: "🛡️ Verificar políticas" }, { text: "💡 Ideias" }]
   ],
@@ -285,6 +286,70 @@ function promptForMode(mode, userText = "") {
     produto: `Analise o produto enviado. Identifique o que é visível e NÃO invente características. Crie uma estratégia comercial inicial, 3 hooks, benefícios demonstráveis, possíveis objeções e uma proposta de vídeo curto. Se faltarem preço, plataforma ou características, use [CONFIRMAR]. Informações do usuário: ${userText}`,
     roteiro: `Crie um roteiro persuasivo para vídeo curto com foco em retenção e conversão, sem falsas promessas. Pedido: ${userText}`,
     imagem: `Crie um prompt visual extremamente detalhado para gerar a imagem solicitada. Se mencionar "minha avatar", preserve a identidade da avatar cadastrada e descreva apenas o que o usuário informou ou o que estiver visível em uma imagem enviada. Pedido: ${userText}`,
+    prompt: `Você está no modo PROMPT PROFISSIONAL DE VÍDEO PARA PRODUTO.
+
+Sua prioridade é fidelidade ao anúncio, retenção, clareza visual, persuasão ética e segurança de plataforma.
+
+REGRAS OBRIGATÓRIAS:
+- Não invente preço, desconto, material, dimensão, benefício, função, resultado, experiência pessoal, avaliação, estoque, promoção ou especificação.
+- Diferencie claramente: (a) informação confirmada pelo usuário; (b) informação apenas visível na imagem; (c) informação ausente.
+- Se faltar uma informação essencial para produzir o vídeo sem inventar, faça no máximo 3 perguntas objetivas ANTES de gerar o pacote final.
+- Se for possível criar sem a informação faltante, use [CONFIRMAR] no lugar do dado.
+- O produto deve permanecer visualmente idêntico à referência: formato, proporções, cores, logo, textura, detalhes, embalagem e quantidade.
+- Não acrescente acessórios, botões, estampas, textos, peças ou funções que não aparecem na referência.
+- Quando houver avatar, preserve a identidade visual da avatar cadastrada e não invente características não fornecidas.
+- Formato preferencial 9:16.
+- Pense em clipes de até 10 segundos. Para vídeos maiores, divida em sequência de clipes independentes, mas visualmente contínuos.
+- Evite texto ilegível dentro da geração visual; prefira indicar textos para sobreposição na edição.
+- Narração curta, natural e humana. Não finja que a criadora comprou, testou ou usou o produto se isso não foi informado.
+- CTA natural. Em preço variável no TikTok Shop, prefira linguagem como "Confira o valor atualizado na sacolinha".
+- Compliance é preventivo, não é garantia de aprovação. Se uma regra depender da versão atual da plataforma, sinalize "VERIFICAR REGRA OFICIAL ATUAL".
+
+ENTREGUE EXATAMENTE NESTA ESTRUTURA:
+
+1. ✅ INFORMAÇÕES CONFIRMADAS DO PRODUTO
+Separe "Confirmado pelo usuário", "Visível na imagem" e "Ainda preciso confirmar", quando aplicável.
+
+2. 🎯 ESTRATÉGIA DE VENDA
+Público provável, dor/desejo legítimo, ângulo de venda, estrutura escolhida e por quê.
+
+3. 💥 3 GANCHOS
+Três opções originais para os primeiros 1–3 segundos. Marque "⭐ Recomendado" no melhor.
+
+4. 🎬 ROTEIRO CRONOMETRADO
+Divida em cenas e segundos. Para cada cena: duração, ação visual, narração e texto curto na tela.
+
+5. 🎥 PROMPT CINEMATOGRÁFICO PRINCIPAL
+Prompt extremamente detalhado: 9:16, cenário, composição, aparência/lente da câmera, distância, enquadramento, profundidade de campo, iluminação, temperatura visual, movimento de câmera, movimento do produto, movimento corporal, mãos, expressão, ritmo, continuidade, realismo, textura, física e entrada/saída da cena.
+
+6. 🔒 BLOCO DE FIDELIDADE DO PRODUTO
+Instruções explícitas para copiar fielmente a referência e lista do que não pode mudar.
+
+7. 👩 DIREÇÃO DA AVATAR
+Pose, gestos, mãos, direção do olhar, expressão, interação com produto, naturalidade e continuidade. Se não houver avatar: "Não aplicável".
+
+8. 🚫 PROMPT NEGATIVO
+Evite deformação do produto, mudança de cor/logo, mãos extras, dedos errados, objetos duplicados, embalagem alterada, texto inventado, anatomia ruim, flicker, warping, morphing, câmera instável, proporções erradas e objetos surgindo/desaparecendo. Adapte ao produto.
+
+9. 🎙️ NARRAÇÃO FINAL
+Versão curta e natural compatível com o tempo total. Sem alegações não confirmadas.
+
+10. 📝 LEGENDA + CTA + IDENTIFICAÇÃO PUBLICITÁRIA
+Legenda transparente, comercial e natural. Quando aplicável, indique conteúdo com link/afiliado. Não invente promoções.
+
+11. 📱 VERSÕES POR PLATAFORMA
+TikTok/TikTok Shop: ajuste hook, ritmo e CTA.
+Shopee Vídeo: ajuste demonstração e CTA para o produto vinculado.
+Instagram Reels: ajuste estética, retenção e legenda.
+Se o usuário pedir carrossel, inclua versão de carrossel para Instagram/TikTok.
+
+12. 🛡️ CHECKLIST DE CONFORMIDADE
+Cheque: fidelidade produto-anúncio; preço/promoção; alegações; disclosure comercial; IA/conteúdo sintético quando aplicável; direitos autorais; marcas/terceiros; conteúdo duplicado; CTA; risco de engano.
+Marque cada item como ✅ OK, ⚠️ CONFIRMAR ou ❌ CORRIGIR.
+Finalize com "Risco preventivo: baixo/médio/alto" e lembre que não é garantia de aprovação.
+
+PEDIDO/INFORMAÇÕES DO USUÁRIO:
+${userText}`,
     vender: `Atue como especialista em CRO, copy e social commerce. Melhore o conteúdo fornecido para aumentar retenção, desejo e conversão, sem inventar prova social, desconto, urgência ou benefícios. Mostre primeiro a versão melhorada e depois, brevemente, o que mudou. Conteúdo: ${userText}`,
     politicas: `Faça uma revisão preventiva de compliance do conteúdo para a plataforma indicada. Classifique risco baixo/médio/alto, aponte exatamente os trechos problemáticos, explique o motivo em linguagem simples e dê uma versão mais segura. Não prometa aprovação e avise quando uma regra atual oficial precisar ser conferida. Conteúdo/plataforma: ${userText}`,
     ideias: `Gere ideias de conteúdo fortes e variadas, pensando em retenção, desejo, utilidade e venda. Evite ideias repetitivas. Pedido: ${userText}`
@@ -441,7 +506,7 @@ async function handlePhoto(message) {
     return;
   }
 
-  if (["produto", "video", "imagem", "vender", "politicas"].includes(user.mode)) {
+  if (["produto", "video", "imagem", "prompt", "vender", "politicas"].includes(user.mode)) {
     const best = message.photo.at(-1);
     const image = await getTelegramFileBytes(best.file_id);
     const caption = (message.caption || "").trim();
@@ -449,6 +514,7 @@ async function handlePhoto(message) {
       produto: "Analise este produto pela imagem e monte a melhor estratégia inicial.",
       video: "Use esta imagem como referência para criar o vídeo.",
       imagem: "Use esta imagem como referência e crie o prompt visual solicitado.",
+      prompt: "Analise esta imagem do produto e gere o pacote completo do modo Prompt Profissional, sem inventar informações.",
       vender: "Analise este conteúdo/produto visualmente e melhore a estratégia para vender.",
       politicas: "Analise esta imagem como parte do conteúdo e faça uma revisão preventiva."
     }[user.mode];
@@ -463,7 +529,7 @@ async function handlePhoto(message) {
   }
 
   await sendMessage(chatId,
-    "📸 Recebi a imagem. Escolha primeiro o que quer fazer com ela: 🛍️ Produto, 🎬 Criar vídeo, 🖼️ Imagem, 🔥 Melhorar para vender ou 🛡️ Verificar políticas."
+    "📸 Recebi a imagem. Escolha primeiro o que quer fazer com ela: 🛍️ Produto, 🎬 Criar vídeo, 🎥 Prompt profissional, 🖼️ Imagem, 🔥 Melhorar para vender ou 🛡️ Verificar políticas."
   );
 }
 
@@ -511,6 +577,11 @@ async function handleMessage(message) {
   if (text === "🖼️ Imagem" || text === "/imagem") {
     return setMode(chatId, "imagem",
       "🖼️ Descreva a imagem que quer criar ou envie uma referência.\n\nPor enquanto vou preparar o prompt visual completo; a geração direta de imagens entra na próxima integração.");
+  }
+
+  if (text === "🎥 Prompt profissional" || text === "/prompt") {
+    return setMode(chatId, "prompt",
+      "🎥 Modo Prompt Profissional ativado.\n\nEnvie a foto do produto e, se tiver, as informações confirmadas do anúncio.\n\nVou preparar análise do produto, 3 hooks, roteiro cronometrado, prompt cinematográfico detalhado, fidelidade do produto, direção da avatar, prompt negativo, narração, legenda/CTA, versões por plataforma e checklist de conformidade.\n\n⚠️ Se faltar um dado essencial, vou perguntar antes em vez de inventar.");
   }
 
   if (text === "🔥 Melhorar para vender" || text === "/vender") {

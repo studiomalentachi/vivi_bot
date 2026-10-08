@@ -1,7 +1,7 @@
 {
   "name": "vivi-bot",
-  "version": "1.2.0",
-  "description": "Vivi Telegram Bot com avatar persistente e cérebro Gemini",
+  "version": "1.3.0",
+  "description": "Vivi Telegram Bot com avatar, Gemini e Prompt Profissional para vídeos de afiliados",
   "main": "index.js",
   "type": "module",
   "scripts": {
